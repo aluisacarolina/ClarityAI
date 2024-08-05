@@ -52,3 +52,10 @@ Found 2 connections involving Aadvik
 Hosts connected to Aadvik between 2023-01-01 00:00:00 and 2023-01-01 03:00:00:
 - Keimy
 - Tyreonna
+
+### Running the Application
+You can also access the tool online using the following link:
+
+https://clarityai-logs.streamlit.app
+
+This will take you directly to the Streamlit app where you can interact with the log parser without needing to run it locally.
