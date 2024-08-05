@@ -28,7 +28,7 @@ def parse_log_file(file, init_time, end_time, target_host):
         for line in file:
             parts = line.strip().split()
             if len(parts) != 3:
-                continue  # Skip malformed lines
+                continue  # Skip lines without the required structure
 
             timestamp, host1, host2 = parts
             try:
