@@ -41,7 +41,7 @@ This project is powered by Streamlit, allowing for an intuitive and interactive 
         - Enter the target hostname you are interested in.
     - Click the 'Parse Log' button to parse the log file and display the results.
 
-### Running the Application
+### Accessing the Tool Online
 You can also access the tool online using the following link:
 
 https://clarityai-logs.streamlit.app
