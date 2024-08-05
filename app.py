@@ -15,11 +15,13 @@ def parse_log_file(file, init_time, end_time, target_host):
         list: List of hostnames connected to the target host.
     """
     connections = []
-    target_connections = 0
 
     # Convert init_time and end_time to timestamps for easy comparison
     init_timestamp = datetime.strptime(init_time, '%Y-%m-%d %H:%M:%S').timestamp()
     end_timestamp = datetime.strptime(end_time, '%Y-%m-%d %H:%M:%S').timestamp()
+
+    # Store log entries in a list to sort them
+    log_entries = []
 
     # Open and read the log file
     with open(file, 'r') as file:
@@ -31,16 +33,21 @@ def parse_log_file(file, init_time, end_time, target_host):
             timestamp, host1, host2 = parts
             try:
                 log_timestamp = int(timestamp) / 1000  # Convert milliseconds to seconds
+                log_entries.append((log_timestamp, host1, host2))
             except ValueError:
                 continue  # Skip lines with invalid timestamps
 
-            # Check if the log entry is within the given time range
-            if init_timestamp <= log_timestamp <= end_timestamp:
-                if host1 == target_host or host2 == target_host:
-                    if host1 == target_host:
-                        connections.append(host2)
-                    elif host2 == target_host:
-                        connections.append(host1)
+    # Sort log entries by timestamp
+    log_entries.sort(key=lambda entry: entry[0])
+
+    # Filter log entries based on time range and target host
+    for log_timestamp, host1, host2 in log_entries:
+        if init_timestamp <= log_timestamp <= end_timestamp:
+            if host1 == target_host or host2 == target_host:
+                if host1 == target_host:
+                    connections.append(host2)
+                elif host2 == target_host:
+                    connections.append(host1)
 
     return connections
 
