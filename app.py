@@ -2,17 +2,31 @@ import streamlit as st
 from datetime import datetime
 
 def parse_log_file(file, init_time, end_time, target_host):
+    """
+    Parses the provided log file and finds connections to the target host within the given time range.
+
+    Args:
+        file (str): Path to the log file.
+        init_time (str): Initial time in 'YYYY-MM-DD HH:MM:SS' format.
+        end_time (str): End time in 'YYYY-MM-DD HH:MM:SS' format.
+        target_host (str): Target hostname to filter connections.
+
+    Returns:
+        list: List of hostnames connected to the target host.
+    """
     connections = []
     target_connections = 0
 
+    # Convert init_time and end_time to timestamps for easy comparison
     init_timestamp = datetime.strptime(init_time, '%Y-%m-%d %H:%M:%S').timestamp()
     end_timestamp = datetime.strptime(end_time, '%Y-%m-%d %H:%M:%S').timestamp()
 
+    # Open and read the log file
     with open(file, 'r') as file:
         for line in file:
             parts = line.strip().split()
             if len(parts) != 3:
-                continue
+                continue  # Skip malformed lines
 
             timestamp, host1, host2 = parts
             try:
@@ -20,9 +34,9 @@ def parse_log_file(file, init_time, end_time, target_host):
             except ValueError:
                 continue  # Skip lines with invalid timestamps
 
+            # Check if the log entry is within the given time range
             if init_timestamp <= log_timestamp <= end_timestamp:
                 if host1 == target_host or host2 == target_host:
-                    target_connections += 1
                     if host1 == target_host:
                         connections.append(host2)
                     elif host2 == target_host:
@@ -30,13 +44,37 @@ def parse_log_file(file, init_time, end_time, target_host):
 
     return connections
 
-# Streamlit app
+def extract_hostnames_from_log(file):
+    """
+    Extracts all unique hostnames from the log file.
+
+    Args:
+        file (str): Path to the log file.
+
+    Returns:
+        list: A sorted list of unique hostnames found in the log file.
+    """
+    hostnames = set() 
+
+    with open(file, 'r') as file:
+        for line in file:
+            parts = line.strip().split()
+            if len(parts) == 3:
+                _, host1, host2 = parts
+                hostnames.add(host1)
+                hostnames.add(host2)
+
+    return sorted(hostnames) 
+
+# Streamlit app configuration
 st.set_page_config(page_title="Log Parser", page_icon="🔍")
+
+# Load the hostnames from the log file
+hostnames = extract_hostnames_from_log('input-file-10000__1_.txt')
 
 # Sidebar content
 with st.sidebar:
-    # Display Clarity AI logo
-    st.image("clarity_ai_logo.png", use_column_width=True)
+    st.image("clarity_ai_logo.png", use_column_width=True)  # Display Clarity AI logo
 
     # Input: Start and End Date
     start_date = st.date_input('Start date')
@@ -59,8 +97,8 @@ with st.sidebar:
     start_datetime = f"{start_date} {start_time}"
     end_datetime = f"{end_date} {end_time}"
 
-    # Input: Target Host
-    target_host = st.text_input('Enter target hostname')
+    # Input: Target Host using a selectbox with autocomplete
+    target_host = st.selectbox('Select or type the target hostname', hostnames)
 
     # Button to Parse Log File
     parse_button = st.button('Parse Log')
@@ -68,7 +106,6 @@ with st.sidebar:
 # Main content area
 st.title('Log File Parser')
 
-# App Description in the Main Area
 st.write("""
 ## Welcome to the Clarity AI Log File Parser
 
@@ -85,9 +122,10 @@ This tool is designed to help you analyze network logs efficiently and effective
 **Note:** Make sure that the log file is properly formatted and placed in the same directory as this app.
 """)
 
-# Display the results
+# Show results when the parse button is clicked and times are valid
 if parse_button and valid_times:
     if start_datetime and end_datetime and target_host:
+        # Parse the log file and get results
         result = parse_log_file('input-file-10000__1_.txt', start_datetime, end_datetime, target_host)
         
         if result:
@@ -96,5 +134,3 @@ if parse_button and valid_times:
             st.markdown("\n".join([f"- {host}" for host in result]))
         else:
             st.markdown(f"No connections found for `{target_host}` between `{start_datetime}` and `{end_datetime}`.")
-    else:
-        st.error("Please enter all required inputs.")
