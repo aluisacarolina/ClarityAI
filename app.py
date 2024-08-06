@@ -12,7 +12,7 @@ def parse_log_file(file, init_time, end_time, target_host):
         target_host (str): Target hostname to filter connections.
 
     Returns:
-        list: List of hostnames connected to the target host.
+        tuple: List of hostnames connected to the target host and (min_date, max_date) found in the log.
     """
     connections = []
 
@@ -22,6 +22,10 @@ def parse_log_file(file, init_time, end_time, target_host):
 
     # Store log entries in a list to sort them
     log_entries = []
+
+    # Track the min and max timestamps
+    min_timestamp = float('inf')
+    max_timestamp = float('-inf')
 
     # Open and read the log file
     with open(file, 'r') as file:
@@ -34,6 +38,13 @@ def parse_log_file(file, init_time, end_time, target_host):
             try:
                 log_timestamp = int(timestamp) / 1000  # Convert milliseconds to seconds
                 log_entries.append((log_timestamp, host1, host2))
+
+                # Update min and max timestamps
+                if log_timestamp < min_timestamp:
+                    min_timestamp = log_timestamp
+                if log_timestamp > max_timestamp:
+                    max_timestamp = log_timestamp
+
             except ValueError:
                 continue  # Skip lines with invalid timestamps
 
@@ -49,7 +60,11 @@ def parse_log_file(file, init_time, end_time, target_host):
                 elif host2 == target_host:
                     connections.append(host1)
 
-    return connections
+    # Convert min and max timestamps back to datetime
+    min_date = datetime.fromtimestamp(min_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+    max_date = datetime.fromtimestamp(max_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+
+    return connections, min_date, max_date
 
 def extract_hostnames_from_log(file):
     """
@@ -71,10 +86,51 @@ def extract_hostnames_from_log(file):
                 hostnames.add(host1)
                 hostnames.add(host2)
 
-    return sorted(hostnames) 
+    return sorted(hostnames)
+
+def get_log_file_date_range(file):
+    """
+    Extracts the minimum and maximum timestamps from the log file.
+
+    Args:
+        file (str): Path to the log file.
+
+    Returns:
+        tuple: (min_date, max_date) as strings in 'YYYY-MM-DD HH:MM:SS' format.
+    """
+    min_timestamp = float('inf')
+    max_timestamp = float('-inf')
+
+    with open(file, 'r') as file:
+        for line in file:
+            parts = line.strip().split()
+            if len(parts) != 3:
+                continue  # Skip lines without the required structure
+
+            timestamp = parts[0]
+            try:
+                log_timestamp = int(timestamp) / 1000  # Convert milliseconds to seconds
+
+                # Update min and max timestamps
+                if log_timestamp < min_timestamp:
+                    min_timestamp = log_timestamp
+                if log_timestamp > max_timestamp:
+                    max_timestamp = log_timestamp
+
+            except ValueError:
+                continue  # Skip lines with invalid timestamps
+
+    # Convert min and max timestamps to datetime strings
+    min_date = datetime.fromtimestamp(min_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+    max_date = datetime.fromtimestamp(max_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+
+    return min_date, max_date
 
 # Streamlit app configuration
 st.set_page_config(page_title="Log Parser", page_icon="🔍")
+
+# Extract the min and max dates from the log file
+min_date, max_date = get_log_file_date_range('input-file-10000__1_.txt')
 
 # Load the hostnames from the log file
 hostnames = extract_hostnames_from_log('input-file-10000__1_.txt')
@@ -82,6 +138,11 @@ hostnames = extract_hostnames_from_log('input-file-10000__1_.txt')
 # Sidebar content
 with st.sidebar:
     st.image("clarity_ai_logo.png", use_column_width=True)  # Display Clarity AI logo
+
+    # Display the log file date range
+   # Display the log file date range
+    st.markdown("### Log File Date Range")
+    st.markdown(f"- Earliest Entry: {min_date}\n- Latest Entry: {max_date}")
 
     # Input: Start and End Date
     start_date = st.date_input('Start date')
@@ -132,8 +193,8 @@ This tool is designed to help you analyze network logs efficiently and effective
 # Show results when the parse button is clicked and times are valid
 if parse_button and valid_times:
     if start_datetime and end_datetime and target_host:
-        # Parse the log file and get results
-        result = parse_log_file('input-file-10000__1_.txt', start_datetime, end_datetime, target_host)
+        # Parse the log file and get results along with min and max dates
+        result, _, _ = parse_log_file('input-file-10000__1_.txt', start_datetime, end_datetime, target_host)
         
         if result:
             st.markdown(f"### Found {len(result)} connections involving `{target_host}`")
